@@ -11,3 +11,4 @@ pygments
 requests
 tqdm
 scikit-learn
+chardet
