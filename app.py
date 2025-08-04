@@ -216,5 +216,6 @@ def predictions():
     return render_template('prediction.html', crop_cards=crop_cards, today=today)
 
 if __name__ == '__main__':
-    app.run(debug=True,port=10000)
+    app.run(host="0.0.0.0", port=5000)
+
 
