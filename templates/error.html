@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Error - CropSense{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="card-panel red lighten-4">
+    <h3>CROP SENSE</h3>
+    <div class="error-message">
+      <i class="material-icons large">error_outline</i>
+      <h4>Error</h4>
+      <p>{{ error }}</p>
+    </div>
+    <a href="{{ url_for('home') }}" class="btn waves-effect amber">
+      RETURN HOME
+      <i class="material-icons right">home</i>
+    </a>
+  </div>
+</div>
+{% endblock %}

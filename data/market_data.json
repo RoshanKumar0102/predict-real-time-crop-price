@@ -1,0 +1,19 @@
+{
+  "trends": [
+    {
+      "commodity": "Wheat",
+      "price_change": "+2.5%",
+      "reason": "Increased export demand"
+    },
+    {
+      "commodity": "Cotton",
+      "price_change": "-1.8%",
+      "reason": "Overproduction in Gujarat"
+    }
+  ],
+  "news": [
+    "Heavy rains delay soybean harvest in Maharashtra",
+    "Government announces subsidy for mustard farmers"
+  ],
+  "last_updated": "2023-11-15"
+}

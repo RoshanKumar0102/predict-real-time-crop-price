@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}CropSense - Crop Predictions{% endblock %}
+
+
+{% block content %}
+<style>
+  body {
+    background: linear-gradient(120deg, #e0f7fa 0%, #fffde4 100%);
+    min-height: 100vh;
+  }
+  .modern-card {
+    box-shadow: 0 4px 24px 0 rgba(38, 166, 154, 0.15), 0 1.5px 4px 0 rgba(0,0,0,0.08);
+    border-radius: 18px;
+    transition: box-shadow 0.2s, transform 0.2s;
+    margin-bottom: 32px;
+    background: #fff;
+    overflow: hidden;
+  }
+  .modern-card:hover {
+    box-shadow: 0 8px 32px 0 rgba(38, 166, 154, 0.25), 0 2px 8px 0 rgba(0,0,0,0.12);
+    transform: translateY(-4px) scale(1.01);
+  }
+  .modern-card .card-image img {
+    border-radius: 18px 0 0 18px;
+    box-shadow: none;
+  }
+  .modern-card .card-content {
+    padding: 18px 24px 12px 24px;
+  }
+  .summary-section {
+    background: #55a626ff;
+    color: #fff;
+    border-radius: 16px;
+    padding: 18px 24px 10px 24px;
+    margin-bottom: 32px;
+    box-shadow: 0 2px 12px 0 rgba(38, 166, 154, 0.10);
+  }
+  .summary-section h4 {
+    margin-top: 0;
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+  .summary-table th, .summary-table td {
+    color: #fff;
+    font-size: 1.08em;
+    border-bottom: 1px solid rgba(255,255,255,0.18);
+  }
+  .summary-table .green-text {
+    color: #00c853 !important;
+    font-weight: 600;
+  }
+  .summary-table th {
+    font-weight: 600;
+  }
+  @media (max-width: 800px) {
+    .modern-card.horizontal { flex-direction: column; }
+    .modern-card .card-image img { border-radius: 18px 18px 0 0; }
+  }
+</style>
+
+<div style="width:100%;padding:0 0 24px 0;margin:0;">
+  <h2 class="center-align" style="font-weight:700;letter-spacing:1px;">Crop Price Predictions</h2>
+
+  <!-- Summary Section for Top Gainers/Losers -->
+  <div class="summary-section" style="width:100%;max-width:1800px;margin:0 auto 32px auto;">
+    <div class="row" style="margin:0;">
+      <div class="col s12 m6">
+        <h4 style="font-size:1.3em;">Top Gainers</h4>
+        <table class="summary-table">
+          <thead><tr><th>Crop</th><th>Price (₹)</th><th>Change (%)</th></tr></thead>
+          <tbody>
+            {% for g in top_gainers %}
+            <tr><td>{{ g.name }}</td><td>{{ g.price }}</td><td class="green-text">{{ g.change }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="col s12 m6">
+        <h4 style="font-size:1.3em;">Top Losers</h4>
+        <table class="summary-table">
+          <thead><tr><th>Crop</th><th>Price (₹)</th><th>Change (%)</th></tr></thead>
+          <tbody>
+            {% for l in top_losers %}
+            <tr><td>{{ l.name }}</td><td>{{ l.price }}</td><td class="green-text">{{ l.change }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" style="width:100%;max-width:1800px;margin:0 auto;">
+    {% for crop in crop_cards %}
+    <div class="col s12 m12 l12" style="padding:0 8px 24px 8px;">
+      <div class="card horizontal modern-card" style="width:100%;min-width:0;">
+        <div class="card-image" style="min-width:180px;max-width:200px;">
+          <img src="{{ crop.image }}" alt="{{ crop.name }}" style="object-fit:cover;max-height:140px;">
+        </div>
+        <div class="card-stacked">
+          <div class="card-content">
+            <span class="card-title" style="font-weight:600;font-size:1.4em;">{{ crop.name }}</span>
+            <div class="row">
+              <div class="col s12 m4">
+                <b>Regions:</b>
+                <ul style="margin-bottom:0.5em;">
+                  {% for region in crop.regions %}
+                  <li>{{ region }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+              <div class="col s12 m4">
+                <b>Export Markets:</b>
+                <ul style="margin-bottom:0.5em;">
+                  {% for market in crop.exports %}
+                  <li>{{ market }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+              <div class="col s12 m4">
+                <b>Current Price:</b>
+                <div style="font-size:1.3em;font-weight:500;">₹{{ crop.current_price }}</div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col s12 m6">
+                <b>Brief Forecast (Next 3 Months)</b>
+                <table class="striped" style="border-radius:8px;overflow:hidden;width:100%;">
+                  <thead>
+                    <tr>
+                      <th>Month</th>
+                      <th>Price (₹)</th>
+                      <th>Change (%)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for month, price, change in crop.forecast[:3] %}
+                    <tr>
+                      <td>{{ month }}</td>
+                      <td>{{ price }}</td>
+                      <td class="{% if change >= 0 %}green-text{% else %}red-text{% endif %}">{{ change }}</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              <div class="col s12 m6">
+                <b>Forecast Graph</b>
+                <canvas id="chart-{{ loop.index }}" height="180" style="background:#f8f8f8;border-radius:8px;width:100%;"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    {% for crop in crop_cards %}
+    var ctx{{ loop.index }} = document.getElementById('chart-{{ loop.index }}').getContext('2d');
+    new Chart(ctx{{ loop.index }}, {
+      type: 'line',
+      data: {
+        labels: {{ crop.forecast | map(attribute=0) | list | tojson }},
+        datasets: [{
+          label: 'Forecast (₹/Qtl)',
+          data: {{ crop.forecast | map(attribute=1) | list | tojson }},
+          borderColor: '#26a69a',
+          backgroundColor: 'rgba(38, 166, 154, 0.1)',
+          tension: 0.3,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return '₹' + context.raw.toFixed(2);
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            title: { display: true, text: 'Price (₹/Qtl)' },
+            beginAtZero: false
+          }
+        }
+      }
+    });
+    {% endfor %}
+  });
+</script>
+{% endblock %}

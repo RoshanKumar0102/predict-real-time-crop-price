@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}CropSense - {{ crop.name }}{% endblock %}
+
+{% block content %}
+<div class="commodity-container">
+  <div class="row">
+    <div class="col s12">
+      <h2>{{ crop.name | upper }}</h2>
+      <div class="divider"></div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Price Card -->
+    <div class="col s12 m4">
+      <div class="card price-card">
+        <div class="card-content">
+          <span class="card-title">Current Price</span>
+          <h3>₹{{ crop.current_price }}</h3>
+          <p>per quintal</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Production Regions -->
+    <div class="col s12 m4">
+      <div class="card">
+        <div class="card-content">
+          <span class="card-title">Key Regions</span>
+          <ul class="collection">
+            {% for region in crop.production_regions %}
+            <li class="collection-item">{{ region }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export Markets -->
+    <div class="col s12 m4">
+      <div class="card">
+        <div class="card-content">
+          <span class="card-title">Export Markets</span>
+          <ul class="collection">
+            {% for market in crop.export_markets %}
+            <li class="collection-item">{{ market }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Price Forecast Chart -->
+  <div class="row">
+    <div class="col s12">
+      <div class="card">
+        <div class="card-content">
+          <span class="card-title">Price Forecast</span>
+          <canvas id="priceChart" height="400"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Brief Forecast Table -->
+  <div class="row">
+    <div class="col s12 m6">
+      <div class="card">
+        <div class="card-content">
+          <span class="card-title">Brief Forecast</span>
+          <table class="striped">
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th>Price (₹)</th>
+                <th>Change</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for month, price, change in forecast %}
+              <tr>
+                <td>{{ month }}</td>
+                <td>{{ price }}</td>
+                <td class="{% if change >= 0 %}green-text{% else %}red-text{% endif %}">
+                  {{ change }}%
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Initialize price chart
+  const ctx = document.getElementById('priceChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: {{ forecast | map(attribute='0') | list | tojson }},
+      datasets: [{
+        label: 'Price Forecast (₹/Qtl)',
+        data: {{ forecast | map(attribute='1') | list | tojson }},
+        borderColor: '#26a69a',
+        backgroundColor: 'rgba(38, 166, 154, 0.1)',
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return '₹' + context.raw.toFixed(2);
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          title: { display: true, text: 'Price (₹/Qtl)' },
+          beginAtZero: false
+        }
+      }
+    }
+  });
+</script>
+{% endblock %}

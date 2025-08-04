@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+
+{% block title %}Market Insights Dashboard | CropSense{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <!-- Dashboard Header -->
+  <div class="dashboard-header">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h1 class="dashboard-title">
+          Market Insights Dashboard
+          <span class="real-time-indicator">
+            <span class="pulse"></span>
+            LIVE
+          </span>
+        </h1>
+        <p class="dashboard-subtitle">Real-time agricultural commodity trends and analysis</p>
+      </div>
+      <div style="text-align: right;">
+        <p style="margin: 0; color: var(--text-secondary);">Last Updated</p>
+        <p style="margin: 0; font-weight: 600; color: var(--text-primary);" id="lastUpdated"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dashboard Controls -->
+  <div class="dashboard-controls">
+    <select class="filter-select" id="commodityFilter">
+      <option value="">All Commodities</option>
+      {% for commodity in insights.commodities %}
+      <option value="{{ commodity }}">{{ commodity }}</option>
+      {% endfor %}
+    </select>
+    
+    <select class="filter-select" id="timeFilter">
+      <option value="7">Last 7 Days</option>
+      <option value="30" selected>Last 30 Days</option>
+      <option value="90">Last 90 Days</option>
+      <option value="365">Last Year</option>
+    </select>
+    
+    <button class="refresh-btn" onclick="refreshData()">
+      <i class="material-icons" style="font-size: 16px; margin-right: 5px;">refresh</i>
+      Refresh
+    </button>
+    
+    <button class="export-btn" onclick="exportData()">
+      <i class="material-icons" style="font-size: 16px; margin-right: 5px;">download</i>
+      Export
+    </button>
+  </div>
+
+  <!-- Key Metrics Grid -->
+  <div class="metrics-grid">
+    <div class="metric-card {% if insights.price_trend > 0 %}positive{% elif insights.price_trend < 0 %}negative{% else %}neutral{% endif %}">
+      <div class="metric-icon">📈</div>
+      <div class="metric-label">Price Trend</div>
+      <div class="metric-value">{{ insights.price_trend }}%</div>
+      <div class="metric-change {% if insights.price_trend > 0 %}positive{% else %}negative{% endif %}">
+        {% if insights.price_trend > 0 %}↗{% else %}↘{% endif %} {{ insights.price_trend|abs }}%
+      </div>
+      <p>Last 30 days</p>
+    </div>
+    
+    <div class="metric-card neutral">
+      <div class="metric-icon">🌾</div>
+      <div class="metric-label">Export Volume</div>
+      <div class="metric-value">{{ "{:,}".format(insights.export_volume) }} MT</div>
+      <div class="metric-change positive">↗ +5.2%</div>
+      <p>Current quarter</p>
+    </div>
+    
+    <div class="metric-card neutral">
+      <div class="metric-icon">🚚</div>
+      <div class="metric-label">Supply Chain</div>
+      <div class="metric-value">{{ insights.supply_status }}</div>
+      <div class="metric-change positive">Stable</div>
+      <p>Current status</p>
+    </div>
+    
+    <div class="metric-card positive">
+      <div class="metric-icon">💰</div>
+      <div class="metric-label">Market Cap</div>
+      <div class="metric-value">₹{{ "{:,}".format(insights.market_cap|default(1250000)) }} Cr</div>
+      <div class="metric-change positive">↗ +2.8%</div>
+      <p>Total market value</p>
+    </div>
+  </div>
+
+
+
+  <!-- Commodity Performance Grid -->
+  <div class="commodity-grid">
+    {% for commodity in insights.commodities %}
+    <div class="commodity-card">
+      <div class="commodity-header">
+        <div class="commodity-icon">{{ "🌾" if commodity == "Wheat" else "🍚" if commodity == "Rice" else "🧶" if commodity == "Cotton" else "🫘" if commodity == "Soybean" else "🌽" if commodity == "Maize" else "☕" if commodity == "Coffee" else "🥜" if commodity == "Groundnut" else "🟡" if commodity == "Mustard" else "🌻" if commodity == "Sunflower" else "🌾" }}</div>
+        <div>
+          <div class="commodity-name">{{ commodity }}</div>
+          <div style="color: var(--text-secondary); font-size: 0.9rem;">Current Price</div>
+        </div>
+      </div>
+      <div class="commodity-price">₹{{ insights.commodity_prices[commodity]|default(2500) }}/Qtl</div>
+      <div class="commodity-change {% if insights.commodity_changes[commodity]|default(0) > 0 %}positive{% else %}negative{% endif %}">
+        {% if insights.commodity_changes[commodity]|default(0) > 0 %}↗{% else %}↘{% endif %} {{ insights.commodity_changes[commodity]|default(0)|abs }}%
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Market Analysis Section -->
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+    <!-- Market News -->
+    <div class="news-container">
+      <h3 style="margin-top: 0; color: var(--text-primary);">Latest Market News</h3>
+      {% for news_item in insights.market_news %}
+      <div class="news-item">
+        <div class="news-title">{{ news_item.title }}</div>
+        <div class="news-date">{{ news_item.date }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Regional Analysis -->
+    <div class="news-container">
+      <h3 style="margin-top: 0; color: var(--text-primary);">Regional Price Variations</h3>
+      <table class="regional-table">
+        <thead>
+          <tr>
+            <th>Region</th>
+            <th>Commodity</th>
+            <th>Price (₹/Qtl)</th>
+            <th>Trend</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for region in insights.regional_prices %}
+          <tr>
+            <td>{{ region.name }}</td>
+            <td>{{ region.commodity }}</td>
+            <td>{{ region.price }}</td>
+            <td>
+              <span class="metric-change {% if region.trend|default(0) > 0 %}positive{% else %}negative{% endif %}">
+                {% if region.trend|default(0) > 0 %}↗{% else %}↘{% endif %} {{ region.trend|default(0)|abs }}%
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Market Forecast Section -->
+  <div class="chart-container">
+    <h3 class="chart-title">Market Forecast & Predictions</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+      
+      <!-- Price Forecast -->
+      <div class="forecast-card">
+        <h4 style="color: var(--text-primary); margin-bottom: 15px; display: flex; align-items: center;">
+          <span style="margin-right: 8px;">📈</span>
+          Price Forecast
+        </h4>
+        <div style="background: linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%); padding: 15px; border-radius: 8px; border-left: 4px solid var(--success-color);">
+          <p style="margin: 0 0 10px 0; color: var(--text-primary); font-weight: 600;">
+            Next 30 Days - Confidence: {{ insights.forecast_data.price_forecast.next_quarter.confidence }}%
+          </p>
+          <div style="margin-bottom: 10px;">
+            {% for commodity, data in insights.forecast_data.price_forecast.next_30_days.items() %}
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.85rem;">
+              <span style="text-transform: capitalize;">{{ commodity }}</span>
+              <span class="metric-change {% if data.trend == 'up' %}positive{% elif data.trend == 'down' %}negative{% else %}neutral{% endif %}">
+                {% if data.trend == 'up' %}↗{% elif data.trend == 'down' %}↘{% else %}→{% endif %} {{ data.change }}%
+              </span>
+            </div>
+            {% endfor %}
+          </div>
+          <p style="margin: 0; color: var(--text-secondary); font-size: 0.8rem; line-height: 1.4;">
+            {{ insights.forecast_summary }}
+          </p>
+        </div>
+      </div>
+
+      <!-- Seasonal Trends -->
+      <div class="forecast-card">
+        <h4 style="color: var(--text-primary); margin-bottom: 15px; display: flex; align-items: center;">
+          <span style="margin-right: 8px;">🌾</span>
+          Seasonal Trends
+        </h4>
+        <div style="background: linear-gradient(135deg, #fff3e0 0%, #fff8e1 100%); padding: 15px; border-radius: 8px; border-left: 4px solid var(--warning-color);">
+          <p style="margin: 0 0 10px 0; color: var(--text-primary); font-weight: 600;">
+            Q2 2024 Outlook - {{ insights.forecast_data.seasonal_trends.q2_2024.expected_yield|replace('_', ' ')|title }}
+          </p>
+          <div style="margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.85rem;">
+              <span>Monsoon Impact:</span>
+              <span style="color: var(--success-color); font-weight: 600;">{{ insights.forecast_data.seasonal_trends.q2_2024.monsoon_impact|title }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.85rem;">
+              <span>Price Volatility:</span>
+              <span style="color: var(--warning-color); font-weight: 600;">{{ insights.forecast_data.seasonal_trends.q2_2024.price_volatility|title }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.85rem;">
+              <span>Export Outlook:</span>
+              <span style="color: var(--success-color); font-weight: 600;">{{ insights.forecast_data.seasonal_trends.q2_2024.export_outlook|title }}</span>
+            </div>
+          </div>
+          <p style="margin: 0; color: var(--text-secondary); font-size: 0.8rem; line-height: 1.4;">
+            Early monsoon arrival expected with favorable rainfall distribution. Key commodities: {{ insights.forecast_data.seasonal_trends.q2_2024.key_commodities|join(', ')|title }}
+          </p>
+        </div>
+      </div>
+
+      <!-- Risk Analysis -->
+      <div class="forecast-card">
+        <h4 style="color: var(--text-primary); margin-bottom: 15px; display: flex; align-items: center;">
+          <span style="margin-right: 8px;">⚠️</span>
+          Risk Analysis
+        </h4>
+        <div style="background: linear-gradient(135deg, #ffebee 0%, #fce4ec 100%); padding: 15px; border-radius: 8px; border-left: 4px solid var(--danger-color);">
+          <p style="margin: 0 0 10px 0; color: var(--text-primary); font-weight: 600;">
+            Key Factors
+          </p>
+          <ul style="margin: 0; color: var(--text-secondary); line-height: 1.5; padding-left: 20px;">
+            <li>Weather conditions affecting crop production</li>
+            <li>Global supply chain disruptions</li>
+            <li>Currency fluctuations impact exports</li>
+            <li>Government policy changes</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Market Insights -->
+  <div class="chart-container">
+    <h3 class="chart-title">Market Performance</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+      <div>
+        <h4 style="color: var(--text-primary); margin-bottom: 10px;">Top Gainers</h4>
+        {% for gainer in insights.top_gainers %}
+        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee;">
+          <span>{{ gainer.name }}</span>
+          <span class="metric-change positive">+{{ gainer.change }}%</span>
+        </div>
+        {% endfor %}
+      </div>
+      
+      <div>
+        <h4 style="color: var(--text-primary); margin-bottom: 10px;">Top Losers</h4>
+        {% for loser in insights.top_losers %}
+        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee;">
+          <span>{{ loser.name }}</span>
+          <span class="metric-change negative">{{ loser.change }}%</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Make chart data available globally
+window.priceLabels = {{ insights.price_labels | tojson }};
+window.priceData = {{ insights.price_data | tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

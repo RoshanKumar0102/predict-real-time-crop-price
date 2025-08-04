@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}CropSense - Agricultural Intelligence{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <header class="dashboard-header">
+    <h1>CROP SENSE</h1>
+    <p>Agricultural Intelligence Platform</p>
+  </header>
+
+  <section class="market-trends">
+    <div class="row">
+      <!-- Top Gainers -->
+      <div class="col s12 m6">
+        <div class="card trend-card green lighten-5">
+          <div class="card-content">
+            <span class="card-title">Top Gainers</span>
+            <table class="highlight">
+              <thead>
+                <tr>
+                  <th>Commodity</th>
+                  <th>Price (₹/Qtl)</th>
+                  <th>Change</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in top_gainers %}
+                <tr>
+                  <td>{{ item.name }}</td>
+                  <td>{{ item.price }}</td>
+                  <td class="green-text">
+                    {{ item.change }}% <i class="material-icons tiny">arrow_upward</i>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Losers -->
+      <div class="col s12 m6">
+        <div class="card trend-card red lighten-5">
+          <div class="card-content">
+            <span class="card-title">Top Losers</span>
+            <table class="highlight">
+              <thead>
+                <tr>
+                  <th>Commodity</th>
+                  <th>Price (₹/Qtl)</th>
+                  <th>Change</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in top_losers %}
+                <tr>
+                  <td>{{ item.name }}</td>
+                  <td>{{ item.price }}</td>
+                  <td class="red-text">
+                    {{ item.change }}% <i class="material-icons tiny">arrow_downward</i>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="commodity-explorer">
+    <div class="card">
+      <div class="card-content">
+        <span class="card-title">Explore by Commodity</span>
+        <div class="commodity-grid">
+          {% for commodity in commodities %}
+          <a href="{{ url_for('commodity', crop_name=commodity.lower()) }}" 
+             class="commodity-chip waves-effect waves-light">
+            {{ commodity }}
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
