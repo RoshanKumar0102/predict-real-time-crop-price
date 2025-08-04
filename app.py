@@ -1,13 +1,10 @@
-import streamlit as st
-from datetime import datetime, timedelta
+from flask import Flask, render_template
 from ml.predictor import CropPredictor
+from datetime import datetime, timedelta
 import random
 
+app = Flask(__name__)
 predictor = CropPredictor()
-
-# ----------------------------
-# Utility Functions
-# ----------------------------
 
 def get_commodities_list():
     return ["Wheat", "Rice", "Cotton", "Soybean", "Maize", 
@@ -16,24 +13,28 @@ def get_commodities_list():
 def generate_market_insights():
     """Generate comprehensive market insights data"""
     commodities = get_commodities_list()
-    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    
+    # Generate sample price trends for the chart
+    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     current_month = datetime.now().month
     price_labels = months[current_month-6:current_month] + months[:current_month-6][:6]
-
+    
+    # Generate commodity prices and changes
     commodity_prices = {}
     commodity_changes = {}
     for commodity in commodities:
         commodity_prices[commodity] = random.randint(1500, 4000)
         commodity_changes[commodity] = round(random.uniform(-8.0, 8.0), 1)
-
+    
+    # Generate regional prices with trends
     regional_prices = [
         {'name': 'North', 'commodity': random.choice(commodities), 'price': random.randint(1500, 3000), 'trend': round(random.uniform(-5.0, 5.0), 1)},
         {'name': 'South', 'commodity': random.choice(commodities), 'price': random.randint(1500, 3000), 'trend': round(random.uniform(-5.0, 5.0), 1)},
         {'name': 'East', 'commodity': random.choice(commodities), 'price': random.randint(1500, 3000), 'trend': round(random.uniform(-5.0, 5.0), 1)},
         {'name': 'West', 'commodity': random.choice(commodities), 'price': random.randint(1500, 3000), 'trend': round(random.uniform(-5.0, 5.0), 1)}
     ]
-
+    
+    # Generate comprehensive forecast data
     forecast_data = {
         'price_forecast': {
             'next_30_days': {
@@ -108,115 +109,111 @@ def generate_market_insights():
             ]
         }
     }
-
+    
+    # Generate market forecast summary
     forecast_summaries = [
-        "Agricultural commodity prices are expected to remain stable...",
-        "Strong demand from international markets is likely to drive prices upward...",
-        "Supply chain improvements and government policies are expected...",
-        "Seasonal factors and monsoon predictions may cause volatility...",
-        "Government policies and MSP adjustments support price stability..."
+        "Agricultural commodity prices are expected to remain stable with moderate fluctuations. Wheat and Rice prices may increase by 2-3%, while Cotton and Soybean could see slight declines due to global supply factors.",
+        "Strong demand from international markets is likely to drive prices upward in the next month, particularly for premium commodities like Coffee and Rice.",
+        "Supply chain improvements and government policies are expected to stabilize prices across major commodities with moderate growth expected.",
+        "Seasonal factors and monsoon predictions may cause temporary price volatility in certain commodities, particularly grains and oilseeds.",
+        "Government policies and MSP adjustments are expected to support price stability in the agricultural sector with controlled inflation."
     ]
-
+    
     return {
+        # Key metrics
         'price_trend': round(random.uniform(-5.0, 5.0), 1),
         'export_volume': random.randint(100000, 500000),
         'supply_status': random.choice(['Stable', 'Tight', 'Surplus']),
         'market_cap': random.randint(800000, 2000000),
+        
+        # Chart data
         'price_labels': price_labels,
         'price_data': [round(random.uniform(100, 200), 1) for _ in range(11)],
+        
+        # Commodity data
         'commodities': commodities,
         'commodity_prices': commodity_prices,
         'commodity_changes': commodity_changes,
+        
+        # Market news
         'market_news': [
-            {'title': 'Govt announces ₹50,000 Cr subsidies', 'date': datetime.now().strftime('%Y-%m-%d')},
-            {'title': f'Drought affects {random.choice(commodities)}', 'date': (datetime.now() - timedelta(days=5)).strftime('%Y-%m-%d')},
-            {'title': f'{random.choice(commodities)} exports up 15%', 'date': (datetime.now() - timedelta(days=10)).strftime('%Y-%m-%d')},
+            {'title': 'Government announces new agricultural subsidies worth ₹50,000 crore', 'date': datetime.now().strftime('%Y-%m-%d')},
+            {'title': f'Drought conditions affect {random.choice(commodities)} production in major states', 'date': (datetime.now() - timedelta(days=5)).strftime('%Y-%m-%d')},
+            {'title': f'Export demand for {random.choice(commodities)} increases by 15%', 'date': (datetime.now() - timedelta(days=10)).strftime('%Y-%m-%d')},
+            {'title': 'New technology adoption improves crop yields across regions', 'date': (datetime.now() - timedelta(days=15)).strftime('%Y-%m-%d')},
+            {'title': 'International trade agreements boost agricultural exports', 'date': (datetime.now() - timedelta(days=20)).strftime('%Y-%m-%d')}
         ],
+        
+        # Regional prices with trends
         'regional_prices': regional_prices,
+        
+        # Market insights
         'forecast_summary': random.choice(forecast_summaries),
         'forecast_data': forecast_data,
         'top_gainers': predictor.get_top_gainers(),
         'top_losers': predictor.get_top_losers(),
+        
+        # Additional data from your existing predictor
         **predictor.get_market_insights()
     }
 
-# ----------------------------
-# Streamlit UI Starts Here
-# ----------------------------
+@app.route('/')
+def home():
+    try:
+        return render_template(
+            'home.html',
+            top_gainers=predictor.get_top_gainers(),
+            top_losers=predictor.get_top_losers(),
+            commodities=get_commodities_list()
+        )
+    except Exception as e:
+        return render_template('error.html', error=str(e))
 
-st.set_page_config(page_title="Crop Price Forecast", layout="wide")
-st.title("🌾 Real-Time Crop Price Forecasting App")
+@app.route('/commodity/<crop_name>')
+def commodity(crop_name):
+    try:
+        crop_data = predictor.get_crop_data(crop_name)
+        if not crop_data:
+            return render_template('error.html', error=f"Crop '{crop_name}' not found"), 404
+            
+        return render_template('commodity.html',
+            crop=crop_data,
+            forecast=predictor.get_forecast(crop_name)
+        )
+    except Exception as e:
+        return render_template('error.html', error=str(e))
 
-menu = st.sidebar.radio("Navigate", ["Home", "Predictions", "Markets", "Commodity Details"])
+@app.route('/markets')
+def markets():
+    try:
+        insights = generate_market_insights()
+        return render_template('markets.html',
+            insights=insights
+        )
+    except Exception as e:
+        return render_template('error.html', error=str(e))
 
-# ----------------------------
-# Home Page
-# ----------------------------
-if menu == "Home":
-    st.header("📈 Market Movers")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("Top Gainers")
-        st.table(predictor.get_top_gainers())
-    with col2:
-        st.subheader("Top Losers")
-        st.table(predictor.get_top_losers())
-
-# ----------------------------
-# Predictions Page
-# ----------------------------
-elif menu == "Predictions":
-    st.header("📊 Crop Predictions")
+@app.route('/predictions')
+def predictions():
     crops = predictor.crop_data['Crop'].unique()
-    today = datetime.now().strftime('%Y-%m-%d')
-
+    crop_cards = []
     for crop in crops:
         crop_name = str(crop)
         crop_data = predictor.get_crop_data(crop_name)
         forecast = predictor.get_forecast(crop_name)
-        image_path = f"static/images/{crop_name.lower()}.jpg"
+        # Try to find an image for the crop
+        image_filename = f"{crop_name.lower()}.jpg"
+        image_path = f"/static/images/{image_filename}"
+        crop_cards.append({
+            'name': crop_name,
+            'image': image_path,
+            'regions': crop_data['production_regions'] if crop_data else [],
+            'exports': crop_data['export_markets'] if crop_data else [],
+            'current_price': crop_data['current_price'] if crop_data else None,
+            'forecast': forecast
+        })
+    today = datetime.now().strftime('%Y-%m-%d')
+    return render_template('prediction.html', crop_cards=crop_cards, today=today)
 
-        with st.expander(f"🌿 {crop_name} ({today})"):
-            col1, col2 = st.columns([1, 2])
-            with col1:
-                st.image(image_path, width=150)
-            with col2:
-                st.markdown(f"**Price:** ₹{crop_data.get('current_price')}")
-                st.markdown(f"**Regions:** {', '.join(crop_data.get('production_regions', []))}")
-                st.markdown(f"**Exports:** {', '.join(crop_data.get('export_markets', []))}")
-                st.markdown(f"**Forecast:** {forecast}")
-
-# ----------------------------
-# Markets Page
-# ----------------------------
-elif menu == "Markets":
-    st.header("📈 Market Insights")
-    insights = generate_market_insights()
-
-    st.subheader("🔍 Key Metrics")
-    st.metric("Market Trend", f"{insights['price_trend']}%")
-    st.metric("Export Volume", f"{insights['export_volume']}")
-    st.metric("Supply Status", insights['supply_status'])
-
-    st.subheader("🌐 Regional Prices")
-    st.table(insights['regional_prices'])
-
-    st.subheader("📢 Market News")
-    for news in insights['market_news']:
-        st.markdown(f"**{news['date']}** - {news['title']}")
-
-# ----------------------------
-# Commodity Details Page
-# ----------------------------
-elif menu == "Commodity Details":
-    crop_selected = st.selectbox("Select a Crop", get_commodities_list())
-    crop_data = predictor.get_crop_data(crop_selected)
-    forecast = predictor.get_forecast(crop_selected)
-
-    if crop_data:
-        st.subheader(f"{crop_selected} Details")
-        st.write(crop_data)
-        st.subheader("Forecast")
-        st.write(forecast)
-    else:
-        st.warning("Crop not found.")
+if __name__ == '__main__':
+    app.run(debug=True)
