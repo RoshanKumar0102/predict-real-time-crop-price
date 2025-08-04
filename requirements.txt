@@ -12,3 +12,5 @@ requests
 tqdm
 scikit-learn
 chardet
+numpy
+pandas
