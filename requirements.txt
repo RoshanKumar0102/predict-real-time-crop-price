@@ -10,4 +10,4 @@ torch
 pygments
 requests
 tqdm
-
+scikit-learn
