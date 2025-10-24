@@ -1,202 +1,464 @@
-{% extends "base.html" %}
-
-{% block title %}CropSense - Crop Predictions{% endblock %}
-
-
-{% block content %}
-<style>
-  body {
-    background: linear-gradient(120deg, #e0f7fa 0%, #fffde4 100%);
-    min-height: 100vh;
-  }
-  .modern-card {
-    box-shadow: 0 4px 24px 0 rgba(38, 166, 154, 0.15), 0 1.5px 4px 0 rgba(0,0,0,0.08);
-    border-radius: 18px;
-    transition: box-shadow 0.2s, transform 0.2s;
-    margin-bottom: 32px;
-    background: #fff;
-    overflow: hidden;
-  }
-  .modern-card:hover {
-    box-shadow: 0 8px 32px 0 rgba(38, 166, 154, 0.25), 0 2px 8px 0 rgba(0,0,0,0.12);
-    transform: translateY(-4px) scale(1.01);
-  }
-  .modern-card .card-image img {
-    border-radius: 18px 0 0 18px;
-    box-shadow: none;
-  }
-  .modern-card .card-content {
-    padding: 18px 24px 12px 24px;
-  }
-  .summary-section {
-    background: #55a626ff;
-    color: #fff;
-    border-radius: 16px;
-    padding: 18px 24px 10px 24px;
-    margin-bottom: 32px;
-    box-shadow: 0 2px 12px 0 rgba(38, 166, 154, 0.10);
-  }
-  .summary-section h4 {
-    margin-top: 0;
-    font-weight: 600;
-    letter-spacing: 1px;
-  }
-  .summary-table th, .summary-table td {
-    color: #fff;
-    font-size: 1.08em;
-    border-bottom: 1px solid rgba(255,255,255,0.18);
-  }
-  .summary-table .green-text {
-    color: #00c853 !important;
-    font-weight: 600;
-  }
-  .summary-table th {
-    font-weight: 600;
-  }
-  @media (max-width: 800px) {
-    .modern-card.horizontal { flex-direction: column; }
-    .modern-card .card-image img { border-radius: 18px 18px 0 0; }
-  }
-</style>
-
-<div style="width:100%;padding:0 0 24px 0;margin:0;">
-  <h2 class="center-align" style="font-weight:700;letter-spacing:1px;">Crop Price Predictions</h2>
-
-  <!-- Summary Section for Top Gainers/Losers -->
-  <div class="summary-section" style="width:100%;max-width:1800px;margin:0 auto 32px auto;">
-    <div class="row" style="margin:0;">
-      <div class="col s12 m6">
-        <h4 style="font-size:1.3em;">Top Gainers</h4>
-        <table class="summary-table">
-          <thead><tr><th>Crop</th><th>Price (₹)</th><th>Change (%)</th></tr></thead>
-          <tbody>
-            {% for g in top_gainers %}
-            <tr><td>{{ g.name }}</td><td>{{ g.price }}</td><td class="green-text">{{ g.change }}</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <div class="col s12 m6">
-        <h4 style="font-size:1.3em;">Top Losers</h4>
-        <table class="summary-table">
-          <thead><tr><th>Crop</th><th>Price (₹)</th><th>Change (%)</th></tr></thead>
-          <tbody>
-            {% for l in top_losers %}
-            <tr><td>{{ l.name }}</td><td>{{ l.price }}</td><td class="green-text">{{ l.change }}</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <div class="row" style="width:100%;max-width:1800px;margin:0 auto;">
-    {% for crop in crop_cards %}
-    <div class="col s12 m12 l12" style="padding:0 8px 24px 8px;">
-      <div class="card horizontal modern-card" style="width:100%;min-width:0;">
-        <div class="card-image" style="min-width:180px;max-width:200px;">
-          <img src="{{ crop.image }}" alt="{{ crop.name }}" style="object-fit:cover;max-height:140px;">
-        </div>
-        <div class="card-stacked">
-          <div class="card-content">
-            <span class="card-title" style="font-weight:600;font-size:1.4em;">{{ crop.name }}</span>
-            <div class="row">
-              <div class="col s12 m4">
-                <b>Regions:</b>
-                <ul style="margin-bottom:0.5em;">
-                  {% for region in crop.regions %}
-                  <li>{{ region }}</li>
-                  {% endfor %}
-                </ul>
-              </div>
-              <div class="col s12 m4">
-                <b>Export Markets:</b>
-                <ul style="margin-bottom:0.5em;">
-                  {% for market in crop.exports %}
-                  <li>{{ market }}</li>
-                  {% endfor %}
-                </ul>
-              </div>
-              <div class="col s12 m4">
-                <b>Current Price:</b>
-                <div style="font-size:1.3em;font-weight:500;">₹{{ crop.current_price }}</div>
-              </div>
-            </div>
-            <div class="row">
-              <div class="col s12 m6">
-                <b>Brief Forecast (Next 3 Months)</b>
-                <table class="striped" style="border-radius:8px;overflow:hidden;width:100%;">
-                  <thead>
-                    <tr>
-                      <th>Month</th>
-                      <th>Price (₹)</th>
-                      <th>Change (%)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for month, price, change in crop.forecast[:3] %}
-                    <tr>
-                      <td>{{ month }}</td>
-                      <td>{{ price }}</td>
-                      <td class="{% if change >= 0 %}green-text{% else %}red-text{% endif %}">{{ change }}</td>
-                    </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
-              <div class="col s12 m6">
-                <b>Forecast Graph</b>
-                <canvas id="chart-{{ loop.index }}" height="180" style="background:#f8f8f8;border-radius:8px;width:100%;"></canvas>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-</div>
-{% endblock %}
-
-{% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    {% for crop in crop_cards %}
-    var ctx{{ loop.index }} = document.getElementById('chart-{{ loop.index }}').getContext('2d');
-    new Chart(ctx{{ loop.index }}, {
-      type: 'line',
-      data: {
-        labels: {{ crop.forecast | map(attribute=0) | list | tojson }},
-        datasets: [{
-          label: 'Forecast (₹/Qtl)',
-          data: {{ crop.forecast | map(attribute=1) | list | tojson }},
-          borderColor: '#26a69a',
-          backgroundColor: 'rgba(38, 166, 154, 0.1)',
-          tension: 0.3,
-          fill: true
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                return '₹' + context.raw.toFixed(2);
-              }
-            }
-          }
-        },
-        scales: {
-          y: {
-            title: { display: true, text: 'Price (₹/Qtl)' },
-            beginAtZero: false
-          }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CropSense - Crop Predictions</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-      }
-    });
-    {% endfor %}
-  });
-</script>
-{% endblock %}
+        
+        body {
+            background: linear-gradient(120deg, #e0f7fa 0%, #fffde4 100%);
+            min-height: 100vh;
+            color: #333;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            padding: 30px 0;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        
+        .logo i {
+            font-size: 2.5rem;
+            color: #2e7d32;
+            margin-right: 15px;
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            color: #1b5e20;
+            margin-bottom: 10px;
+        }
+        
+        .tagline {
+            font-size: 1.2rem;
+            color: #388e3c;
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+        
+        .summary-section {
+            background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+            color: #fff;
+            border-radius: 16px;
+            padding: 25px 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 6px 20px rgba(46, 125, 50, 0.3);
+        }
+        
+        .summary-title {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .summary-title i {
+            margin-right: 10px;
+        }
+        
+        .summary-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .summary-item {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            backdrop-filter: blur(5px);
+        }
+        
+        .summary-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .summary-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .crops-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .modern-card {
+            box-shadow: 0 4px 24px 0 rgba(38, 166, 154, 0.15), 0 1.5px 4px 0 rgba(0,0,0,0.08);
+            border-radius: 18px;
+            transition: box-shadow 0.2s, transform 0.2s;
+            background: #fff;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        .modern-card:hover {
+            box-shadow: 0 8px 32px 0 rgba(38, 166, 154, 0.25), 0 2px 8px 0 rgba(0,0,0,0.12);
+            transform: translateY(-4px) scale(1.01);
+        }
+        
+        .card-image {
+            height: 200px;
+            overflow: hidden;
+        }
+        
+        .card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s;
+        }
+        
+        .modern-card:hover .card-image img {
+            transform: scale(1.05);
+        }
+        
+        .card-content {
+            padding: 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .crop-name {
+            font-size: 1.4rem;
+            color: #1b5e20;
+            margin-bottom: 5px;
+        }
+        
+        .success-rate {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        
+        .crop-details {
+            margin-bottom: 20px;
+            flex-grow: 1;
+        }
+        
+        .detail-item {
+            display: flex;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            width: 120px;
+            color: #555;
+        }
+        
+        .detail-value {
+            color: #333;
+        }
+        
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            margin-top: auto;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border-radius: 30px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-primary {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #388e3c;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            color: #4caf50;
+            border: 1px solid #4caf50;
+        }
+        
+        .btn-outline:hover {
+            background: #e8f5e9;
+        }
+        
+        .btn i {
+            margin-right: 8px;
+        }
+        
+        .prediction-accuracy {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .accuracy-bar {
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        
+        .accuracy-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: #4caf50;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 30px 0;
+            color: #666;
+            font-size: 0.9rem;
+            border-top: 1px solid #e0e0e0;
+            margin-top: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .crops-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-seedling"></i>
+                <h1>CropSense</h1>
+            </div>
+            <p class="tagline">AI-powered crop predictions for optimal farming decisions</p>
+        </header>
+        
+        <section class="summary-section">
+            <h2 class="summary-title"><i class="fas fa-chart-line"></i> Prediction Summary</h2>
+            <div class="summary-content">
+                <div class="summary-item">
+                    <div class="summary-value">87%</div>
+                    <div class="summary-label">Average Prediction Accuracy</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value">12</div>
+                    <div class="summary-label">Crops Analyzed</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value">94%</div>
+                    <div class="summary-label">Soil Compatibility</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value">$2,450</div>
+                    <div class="summary-label">Estimated Profit Potential</div>
+                </div>
+            </div>
+        </section>
+        
+        <h2 style="margin-bottom: 20px; color: #1b5e20;">Recommended Crops</h2>
+        
+        <div class="crops-grid">
+            <!-- Crop Card 1 -->
+            <div class="modern-card">
+                <div class="card-image">
+                    <img src="https://images.unsplash.com/photo-1597848212624-e6d4bd7e1e92?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" alt="Corn Field">
+                </div>
+                <div class="card-content">
+                    <div class="card-header">
+                        <div>
+                            <h3 class="crop-name">Corn</h3>
+                            <div class="success-rate">92% Match</div>
+                        </div>
+                    </div>
+                    <div class="crop-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Season:</span>
+                            <span class="detail-value">Spring/Summer</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Soil Type:</span>
+                            <span class="detail-value">Loamy, Well-drained</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Water Needs:</span>
+                            <span class="detail-value">Moderate to High</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Yield Potential:</span>
+                            <span class="detail-value">180-220 bu/acre</span>
+                        </div>
+                        <div class="prediction-accuracy">
+                            <div>Prediction Confidence: 89%</div>
+                            <div class="accuracy-bar">
+                                <div class="accuracy-fill" style="width: 89%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-outline"><i class="fas fa-info-circle"></i> Details</button>
+                        <button class="btn btn-primary"><i class="fas fa-chart-bar"></i> Analyze</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Crop Card 2 -->
+            <div class="modern-card">
+                <div class="card-image">
+                    <img src="https://images.unsplash.com/photo-1620748699237-ccb6ebaa7ec5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" alt="Soybean Field">
+                </div>
+                <div class="card-content">
+                    <div class="card-header">
+                        <div>
+                            <h3 class="crop-name">Soybeans</h3>
+                            <div class="success-rate">88% Match</div>
+                        </div>
+                    </div>
+                    <div class="crop-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Season:</span>
+                            <span class="detail-value">Spring/Summer</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Soil Type:</span>
+                            <span class="detail-value">Loamy, Slightly Acidic</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Water Needs:</span>
+                            <span class="detail-value">Moderate</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Yield Potential:</span>
+                            <span class="detail-value">50-60 bu/acre</span>
+                        </div>
+                        <div class="prediction-accuracy">
+                            <div>Prediction Confidence: 85%</div>
+                            <div class="accuracy-bar">
+                                <div class="accuracy-fill" style="width: 85%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-outline"><i class="fas fa-info-circle"></i> Details</button>
+                        <button class="btn btn-primary"><i class="fas fa-chart-bar"></i> Analyze</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Crop Card 3 -->
+            <div class="modern-card">
+                <div class="card-image">
+                    <img src="https://images.unsplash.com/photo-1613478223719-2ab802602423?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" alt="Wheat Field">
+                </div>
+                <div class="card-content">
+                    <div class="card-header">
+                        <div>
+                            <h3 class="crop-name">Wheat</h3>
+                            <div class="success-rate">79% Match</div>
+                        </div>
+                    </div>
+                    <div class="crop-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Season:</span>
+                            <span class="detail-value">Fall/Winter</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Soil Type:</span>
+                            <span class="detail-value">Clay Loam, Well-drained</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Water Needs:</span>
+                            <span class="detail-value">Low to Moderate</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Yield Potential:</span>
+                            <span class="detail-value">60-80 bu/acre</span>
+                        </div>
+                        <div class="prediction-accuracy">
+                            <div>Prediction Confidence: 82%</div>
+                            <div class="accuracy-bar">
+                                <div class="accuracy-fill" style="width: 82%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-outline"><i class="fas fa-info-circle"></i> Details</button>
+                        <button class="btn btn-primary"><i class="fas fa-chart-bar"></i> Analyze</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>CropSense &copy; 2023 | AI-Powered Agricultural Insights</p>
+            <p>Data updated: October 15, 2023</p>
+        </footer>
+    </div>
+
+    <script>
+        // Add some interactive functionality
+        document.querySelectorAll('.btn-primary').forEach(button => {
+            button.addEventListener('click', function() {
+                const cropName = this.closest('.modern-card').querySelector('.crop-name').textContent;
+                alert(`Analysis requested for ${cropName}. Generating detailed report...`);
+            });
+        });
+        
+        document.querySelectorAll('.btn-outline').forEach(button => {
+            button.addEventListener('click', function() {
+                const cropName = this.closest('.modern-card').querySelector('.crop-name').textContent;
+                alert(`Showing detailed information for ${cropName}`);
+            });
+        });
+    </script>
+</body>
+</html>
